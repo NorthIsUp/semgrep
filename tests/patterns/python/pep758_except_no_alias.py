@@ -11,3 +11,15 @@ try:
   pass
 except ValueError, TypeError:
   pass
+
+# ERROR:
+try:
+  pass
+except* ValueError as e:
+  pass
+
+# OK:
+try:
+  pass
+except* ValueError, TypeError:
+  pass

@@ -48,14 +48,6 @@ let to_list = function
   | Single e -> [e]
   | Tup l -> l
 
-(* python3.14 (PEP 758): 'except A, B:' is 'except (A, B):', but in
- * python2 'except A, e:' meant 'except A as e:' *)
-let excepthandler_of_tuple texcept xs body =
-  match xs with
-  | Tup [typ; Name (id, _)] when Hook.get Flag_parsing_python.python2 ->
-      ExceptHandler (texcept, Some typ, Some id, body)
-  | _ -> ExceptHandler (texcept, Some (tuple_expr xs), None, body)
-
 (* this is important for semgrep, to get the right range (and for autofix) *)
 let rewrap_paren l e r =
   match e with
@@ -623,10 +615,13 @@ try_stmt:
       { TryExcept ($1, $3, [], None, Some ($4, $6)) }
 
 excepthandler:
-  | EXCEPT               ":" suite { ExceptHandler ($1, None, None, $3) }
-  (* python3-ext: https://peps.python.org/pep-0758/ (and python2, see excepthandler_of_tuple) *)
-  | EXCEPT tuple(test)   ":" suite { excepthandler_of_tuple $1 $2 $4 }
-  | EXCEPT test AS NAME  ":" suite { ExceptHandler ($1, Some $2, Some $4, $6) }
+  | EXCEPT                  ":" suite { ExceptHandler ($1, None, None, $3) }
+  (* python3-ext: https://peps.python.org/pep-0758/ (was 'except A, e:' in python2) *)
+  | EXCEPT     tuple(test)  ":" suite { ExceptHandler ($1, Some (tuple_expr $2), None, $4) }
+  | EXCEPT     test AS NAME ":" suite { ExceptHandler ($1, Some $2, Some $4, $6) }
+  (* python3-ext: https://peps.python.org/pep-0654/ *)
+  | EXCEPT "*" tuple(test)  ":" suite { ExceptHandler ($1, Some (tuple_expr $3), None, $5) }
+  | EXCEPT "*" test AS NAME ":" suite { ExceptHandler ($1, Some $3, Some $5, $7) }
 
 with_stmt:
   | WITH with_inner ":" suite                         { $2 ($1, $4) }

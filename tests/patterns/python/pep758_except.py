@@ -25,6 +25,18 @@ def f():
   except ValueError, TypeError:
     pass
 
+# ERROR:
+try:
+  pass
+except* ValueError, TypeError:
+  pass
+
+# ERROR:
+try:
+  pass
+except* TypeError, ValueError, KeyError:
+  pass
+
 # OK: no ValueError
 try:
   pass

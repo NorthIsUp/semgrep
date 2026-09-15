@@ -1,4 +1,6 @@
-Python: `except A, B:` and `except A, B, C:` (PEP 758, Python 3.14) are now
-parsed as a tuple of exception types, like `except (A, B):`, instead of the
-Python 2 `except A as B:` form (or a parse error for three or more types).
-The Python 2 reading is kept when scanning with `python2` as the language.
+Python: `except A, B:` and `except A, B, C:` (PEP 758, Python 3.14) and the
+`except*` forms of both are now parsed as a tuple of exception types, like
+`except (A, B):`, rather than as the Python 2 `except A as B:` or a parse
+error. `except*` is now handled by Semgrep's primary Python parser too, so
+exception groups no longer depend on the fallback parser. Note that Python
+2's `except A, e:` is no longer read as `except A as e:`, even for `python2`.

@@ -2061,7 +2061,7 @@ and map_except_clause (env : env) ((v1, v2, v3, v4) : CST.except_clause) :
                 (v1, id_opt_of_expr e2)
             (* PEP 758 (Python 3.14): 'except A, B:' is 'except (A, B):', a
                tuple of types with no name bound (Python 2 read it as 'as').
-               coupling: excepthandler_of_tuple in Parser_python.mly.
+               coupling: the excepthandler rule in Parser_python.mly.
                TODO: the vendored grammar accepts a single comma, so
                'except A, B, C:' still fails here (upstream uses commaSep1).
             *)

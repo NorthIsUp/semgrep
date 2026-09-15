@@ -112,9 +112,7 @@ let rec parse ?(parsing_mode = Python) (filename : Fpath.t) =
     (* -------------------------------------------------- *)
     let xs =
       Profiling.measure "Parser_python.main" (fun () ->
-          Hook.with_hook_set Flag_parsing_python.python2
-            (parsing_mode =*= Python2) (fun () ->
-              Parser_python.main lexer lexbuf_fake))
+          Parser_python.main lexer lexbuf_fake)
     in
     { Parsing_result.ast = xs; tokens = toks; stat }
   with
@@ -199,8 +197,7 @@ let any_of_string ?(parsing_mode = Python) s =
       (* -------------------------------------------------- *)
       (* Call parser *)
       (* -------------------------------------------------- *)
-      Hook.with_hook_set Flag_parsing_python.python2 (parsing_mode =*= Python2)
-        (fun () -> Parser_python.sgrep_spatch_pattern lexer lexbuf_fake))
+      Parser_python.sgrep_spatch_pattern lexer lexbuf_fake)
 
 (*****************************************************************************)
 (* Fuzzy parsing *)
