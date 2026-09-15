@@ -2053,17 +2053,32 @@ and map_except_clause (env : env) ((v1, v2, v3, v4) : CST.except_clause) :
           | e -> (Some (map_expression env e), None)
         in
         match (v2, aspat) with
-        | Some (t, v2), None ->
-            let _t =
-              match t with
-              | `As tok -> (* "as" *) token env tok
-              (* This is not legal in Python 3. There must be a tuple around this.
-                  https://peps.python.org/pep-3110/#grammar-changes
-              *)
-              | `COMMA tok -> (* "," *) token env tok
-            in
-            let v2 = map_expression env v2 in
-            (v1, id_opt_of_expr v2)
+        | Some (t, v2), None -> (
+            let e2 = map_expression env v2 in
+            match t with
+            | `As tok ->
+                let _t = (* "as" *) token env tok in
+                (v1, id_opt_of_expr e2)
+            (* PEP 758 (Python 3.14): 'except A, B:' is sugar for
+               'except (A, B):', so the comma builds a tuple of exception
+               types and binds no name (in Python 2 it used to mean
+               'except A as B:', see PEP 3110).
+               coupling: languages/python/menhir/Parser_python.mly,
+               excepthandler_of_tuple, which also handles the Python 2 form.
+               Note that the vendored tree-sitter-python grammar only accepts a
+               single comma here, so 'except A, B, C:' is still a parse error
+               for this parser (upstream tree-sitter-python uses commaSep1).
+               That form is handled by the menhir parser, which is tried first
+               anyway (see Parse_target.ml).
+            *)
+            | `COMMA tok ->
+                let _t = (* "," *) token env tok in
+                let ty =
+                  match v1 with
+                  | Some e1 -> Some (Tuple (CompList (fb [ e1; e2 ]), no_ctx))
+                  | None -> Some e2
+                in
+                (ty, None))
         (* It would be really weird for there to be this `as` after the other `as`.
            Let's just ignore one.
         *)
