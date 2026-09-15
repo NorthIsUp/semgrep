@@ -2059,17 +2059,11 @@ and map_except_clause (env : env) ((v1, v2, v3, v4) : CST.except_clause) :
             | `As tok ->
                 let _t = (* "as" *) token env tok in
                 (v1, id_opt_of_expr e2)
-            (* PEP 758 (Python 3.14): 'except A, B:' is sugar for
-               'except (A, B):', so the comma builds a tuple of exception
-               types and binds no name (in Python 2 it used to mean
-               'except A as B:', see PEP 3110).
-               coupling: languages/python/menhir/Parser_python.mly,
-               excepthandler_of_tuple, which also handles the Python 2 form.
-               Note that the vendored tree-sitter-python grammar only accepts a
-               single comma here, so 'except A, B, C:' is still a parse error
-               for this parser (upstream tree-sitter-python uses commaSep1).
-               That form is handled by the menhir parser, which is tried first
-               anyway (see Parse_target.ml).
+            (* PEP 758 (Python 3.14): 'except A, B:' is 'except (A, B):', a
+               tuple of types with no name bound (Python 2 read it as 'as').
+               coupling: excepthandler_of_tuple in Parser_python.mly.
+               TODO: the vendored grammar accepts a single comma, so
+               'except A, B, C:' still fails here (upstream uses commaSep1).
             *)
             | `COMMA tok ->
                 let _t = (* "," *) token env tok in

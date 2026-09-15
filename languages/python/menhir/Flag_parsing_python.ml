@@ -11,21 +11,10 @@
    LICENSE for more details.
 *)
 
-(* Flags specific to the Python parser in this directory.
- *
- * Unlike Parse_python.parsing_mode, which is threaded explicitly through the
- * lexer, these flags are for the few places (currently only the generated
- * menhir parser) that cannot receive the information as a parameter.
- *)
+(* Flags for the parts of the Python parser that cannot receive the
+ * Parse_python.parsing_mode as a parameter (i.e., the generated grammar). *)
 
-(* Whether the grammar should use the Python 2 reading of the constructs whose
- * meaning changed in Python 3.
- *
- * Currently this only affects 'except A, e:', which in Python 2 was the
- * equivalent of 'except A as e:' but which, since Python 3.14 (PEP 758),
- * means 'except (A, e):', i.e. a tuple of exception types.
- *
- * This is set by Parse_python.ml around the calls to the generated parser
- * when the parsing mode is Parse_python.Python2.
- *)
+(* Use the Python 2 reading of constructs whose meaning changed in Python 3
+ * (currently just 'except A, e:'). Set by Parse_python around the parser
+ * calls when the parsing mode is Python2. *)
 let python2 = Hook.create false

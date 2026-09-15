@@ -1,5 +1,4 @@
 Python: `except A, B:` and `except A, B, C:` (PEP 758, Python 3.14) are now
-parsed as an unparenthesized tuple of exception types, like `except (A, B):`,
-instead of being read as the Python 2 `except A as B:` form (or, for three or
-more types, failing to parse). The Python 2 reading is still used when scanning
-with `python2` as the language.
+parsed as a tuple of exception types, like `except (A, B):`, instead of the
+Python 2 `except A as B:` form (or a parse error for three or more types).
+The Python 2 reading is kept when scanning with `python2` as the language.

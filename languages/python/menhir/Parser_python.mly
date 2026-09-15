@@ -48,14 +48,8 @@ let to_list = function
   | Single e -> [e]
   | Tup l -> l
 
-(* PEP 758 (Python 3.14): 'except A, B:' (and 'except A, B, C:') is just
- * sugar for 'except (A, B):', that is an unparenthesized tuple of exception
- * types; no name can be bound in that form.
- * In Python 2 though, 'except A, e:' meant 'except A as e:', so we keep that
- * older reading (and only for the two-element 'type, identifier' shape) when
- * we are parsing in Python 2 mode (see Flag_parsing_python.python2, set by
- * Parse_python.ml).
- *)
+(* python3.14 (PEP 758): 'except A, B:' is 'except (A, B):', but in
+ * python2 'except A, e:' meant 'except A as e:' *)
 let excepthandler_of_tuple texcept xs body =
   match xs with
   | Tup [typ; Name (id, _)] when Hook.get Flag_parsing_python.python2 ->
@@ -630,9 +624,7 @@ try_stmt:
 
 excepthandler:
   | EXCEPT               ":" suite { ExceptHandler ($1, None, None, $3) }
-  (* python3.14 (PEP 758): 'except A, B:' is 'except (A, B):'.
-   * python2: 'except A, e:' was 'except A as e:'.
-   * Both are handled by excepthandler_of_tuple above. *)
+  (* python3-ext: https://peps.python.org/pep-0758/ (and python2, see excepthandler_of_tuple) *)
   | EXCEPT tuple(test)   ":" suite { excepthandler_of_tuple $1 $2 $4 }
   | EXCEPT test AS NAME  ":" suite { ExceptHandler ($1, Some $2, Some $4, $6) }
 
