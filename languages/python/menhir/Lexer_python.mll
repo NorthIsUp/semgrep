@@ -194,10 +194,10 @@ let encoding = 'u' | 'U' | rawprefix
 (* (encoding encoding) for python2 legacy support *)
 let stringprefix = (encoding | kind | (encoding kind) | (kind encoding) | (encoding encoding))?
 
-(* Per https://www.python.org/dev/peps/pep-0498/, 'f' can be combined with 'r' but
- * not 'u' or 'b'
+(* Interpolated strings (PEPs 498 and 750) can be combined with 'r', but
+ * not 'u' or 'b'. They share the same interpolation grammar.
  *)
-let fstringspecifier = 'f' | 'F'
+let fstringspecifier = 'f' | 'F' | 't' | 'T'
 let fstringprefix = fstringspecifier | (fstringspecifier rawprefix) | (rawprefix fstringspecifier)
 
 let escapeseq = '\\' _

@@ -1,0 +1,16 @@
+rules:
+  - id: template-string
+    languages: [python]
+    severity: WARNING
+    message: Template string
+    pattern: t"Hello {$NAME}"
+  - id: template-expression
+    languages: [python]
+    severity: WARNING
+    message: Call inside an interpolation
+    pattern: source(...)
+  - id: plain-string
+    languages: [python]
+    severity: WARNING
+    message: Ordinary string value
+    pattern: consume("hello")
