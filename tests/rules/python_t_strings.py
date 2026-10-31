@@ -1,5 +1,22 @@
 # ruleid: template-string
 t"Hello {name}"
+
+# ruleid: escaped-template
+escaped(t"A😀")
+# ruleid: escaped-template
+escaped(t"\x41\U0001f600")
+# ruleid: escaped-template
+escaped(t"\u0041\N{GRINNING FACE}")
+# ruleid: escaped-template
+escaped(t"\101\N{GRINNING FACE}")
+# ruleid: escaped-template
+escaped(t"\N{LATIN CAPITAL LETTER A}\N{GRINNING FACE}")
+# ok: escaped-template
+escaped(rt"\x41\U0001f600")
+# ok: escaped-template
+escaped(rt"\N{value}")
+# ruleid: template-expression
+raw_named(rt"\N{source()}")
 # ruleid: template-string
 T'Hello {user}'
 # ruleid: template-string

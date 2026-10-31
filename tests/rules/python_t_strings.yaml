@@ -1,4 +1,9 @@
 rules:
+  - id: escaped-template
+    languages: [python]
+    severity: WARNING
+    message: Equivalent decoded template text
+    pattern: escaped(t"A😀")
   - id: template-string
     languages: [python]
     severity: WARNING
