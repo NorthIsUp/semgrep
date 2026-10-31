@@ -47,6 +47,29 @@ let tests =
                   | _ -> Alcotest.fail ("not a template string: " ^ source))
                 quotes)
             prefixes);
+      t "interpolated string escapes" (fun () ->
+          List.iter
+            (fun (prefix, expected) ->
+              List.iter
+                (fun quote ->
+                  let source = prefix ^ quote ^ "\\n\\t\\\\" ^ quote in
+                  match Parse_python.program_of_string source with
+                  | [
+                   AST_python.ExprStmt
+                     (AST_python.InterpolatedString
+                        (_, [ AST_python.Literal (AST_python.Str (text, _)) ], _));
+                  ] ->
+                      Alcotest.(check string) source expected text
+                  | _ -> Alcotest.fail ("not a literal string: " ^ source))
+                [ "'"; "\""; "'''"; "\"\"\"" ])
+            [
+              ("t", "\n\t\\");
+              ("f", "\n\t\\");
+              ("rt", "\\n\\t\\\\");
+              ("Tr", "\\n\\t\\\\");
+              ("rf", "\\n\\t\\\\");
+              ("Fr", "\\n\\t\\\\");
+            ]);
       t "template string syntax" (fun () ->
           Parse_python.parse_program
             (tests_path / "parsing" / "python" / "t_strings.py")

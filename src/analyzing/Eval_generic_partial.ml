@@ -423,7 +423,6 @@ and eval_special env (special, _) (args : arguments) =
   | Op GtE, [ Some Cint; Some Cint ] ->
       apply_bop_args (binop_cmp_cst ( >= )) args
   (* strings *)
-  | ConcatString (FString "t"), _ when is_lang env Lang.Python -> None
   | ConcatString (FString "f"), _ when is_lang env Lang.Python ->
       eval_python_fstring env args
   | ConcatString _, _ ->

@@ -81,6 +81,17 @@ let unescaped s =
     String.iter unescapechar s;
     Buffer.contents buf
 
+(** Decode escapes unless the interpolation prefix is raw, preserving the
+ * original token for source locations.
+ *)
+let fstring_fragment pre lexbuf =
+  let text = tok lexbuf in
+  let text =
+    if String.contains pre 'r' || String.contains pre 'R' then text
+    else unescaped text
+  in
+  FSTRING_STRING (text, tokinfo lexbuf)
+
 (* ---------------------------------------------------------------------- *)
 (* Lexer state *)
 (* ---------------------------------------------------------------------- *)
@@ -600,7 +611,7 @@ and dq_longstrlit state pos pre = shortest
 
 and fstring_single state pre = parse
  | "'" { pop_mode state; FSTRING_END (tokinfo lexbuf) }
- | "{{" { FSTRING_STRING (tok lexbuf, tokinfo lexbuf)}
+ | "{{" { fstring_fragment pre lexbuf }
  | '{' {
     ignore_nl state;
     push_mode state STATE_UNDERSCORE_TOKEN;
@@ -608,10 +619,10 @@ and fstring_single state pre = parse
    }
  (* using escapeseq2 here! for raw-fstring *)
  | ([^ '\\' '\r' '\n' '\'' '{'] | escapeseq2)*
-    { FSTRING_STRING (tok lexbuf, tokinfo lexbuf)}
+    { fstring_fragment pre lexbuf }
  (* ugly: for raw-fstring *)
  | "\\{" { if pre =~ ".*[rR]" then Parsing_helpers.yyback 1 lexbuf;
-      FSTRING_STRING (tok lexbuf, tokinfo lexbuf)
+      fstring_fragment pre lexbuf
     }
 
  | eof { error "EOF in string" lexbuf; EOF (tokinfo lexbuf) }
@@ -619,17 +630,17 @@ and fstring_single state pre = parse
 
 and fstring_double state pre = parse
  | '"' { pop_mode state; FSTRING_END (tokinfo lexbuf) }
- | "{{" { FSTRING_STRING (tok lexbuf, tokinfo lexbuf)}
+ | "{{" { fstring_fragment pre lexbuf }
  | '{' {
     ignore_nl state;
     push_mode state STATE_UNDERSCORE_TOKEN;
     FSTRING_LBRACE (tokinfo lexbuf)
    }
  | ([^ '\\' '\r' '\n' '\"' '{'] | escapeseq2)*
-    { FSTRING_STRING (tok lexbuf, tokinfo lexbuf)}
+    { fstring_fragment pre lexbuf }
  (* ugly: for raw-fstring *)
  | "\\{" { if pre =~ ".*[rR]" then Parsing_helpers.yyback 1 lexbuf;
-      FSTRING_STRING (tok lexbuf, tokinfo lexbuf)
+      fstring_fragment pre lexbuf
     }
 
  | eof { error "EOF in string" lexbuf; EOF (tokinfo lexbuf) }
@@ -637,19 +648,19 @@ and fstring_double state pre = parse
 
 and fstring_triple_single state pre = parse
  | "'''" { pop_mode state; FSTRING_END (tokinfo lexbuf) }
- | "{{" { FSTRING_STRING (tok lexbuf, tokinfo lexbuf)}
+ | "{{" { fstring_fragment pre lexbuf }
  | '{' {
     ignore_nl state;
     push_mode state STATE_UNDERSCORE_TOKEN;
     FSTRING_LBRACE (tokinfo lexbuf)
    }
- | '\'' { FSTRING_STRING (tok lexbuf, tokinfo lexbuf) }
+ | '\'' { fstring_fragment pre lexbuf }
 
  | ([^ '\\' '{' '\''] | escapeseq2)*
-    { FSTRING_STRING (tok lexbuf, tokinfo lexbuf)}
+    { fstring_fragment pre lexbuf }
  (* ugly: for raw-fstring *)
  | "\\{" { if pre =~ ".*[rR]" then Parsing_helpers.yyback 1 lexbuf;
-      FSTRING_STRING (tok lexbuf, tokinfo lexbuf)
+      fstring_fragment pre lexbuf
     }
 
  | eof { error "EOF in string" lexbuf; EOF (tokinfo lexbuf) }
@@ -657,19 +668,19 @@ and fstring_triple_single state pre = parse
 
 and fstring_triple_double state pre = parse
  | "\"\"\"" { pop_mode state; FSTRING_END (tokinfo lexbuf) }
- | "{{" { FSTRING_STRING (tok lexbuf, tokinfo lexbuf)}
+ | "{{" { fstring_fragment pre lexbuf }
  | '{' {
     ignore_nl state;
     push_mode state STATE_UNDERSCORE_TOKEN;
     FSTRING_LBRACE (tokinfo lexbuf)
    }
- | '"' { FSTRING_STRING (tok lexbuf, tokinfo lexbuf) }
+ | '"' { fstring_fragment pre lexbuf }
 
  | ([^ '\\' '{' '"'] | escapeseq2)*
-    { FSTRING_STRING (tok lexbuf, tokinfo lexbuf)}
+    { fstring_fragment pre lexbuf }
  (* ugly: for raw-fstring *)
  | "\\{" { if pre =~ ".*[rR]" then Parsing_helpers.yyback 1 lexbuf;
-      FSTRING_STRING (tok lexbuf, tokinfo lexbuf)
+      fstring_fragment pre lexbuf
     }
 
  | eof { error "EOF in string" lexbuf; EOF (tokinfo lexbuf) }

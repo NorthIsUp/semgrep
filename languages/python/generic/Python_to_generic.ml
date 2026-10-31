@@ -166,13 +166,13 @@ let rec expr env (x : expr) =
       |> G.e
   | InterpolatedString (v1, xs, v3) ->
       let opening = Tok.content_of_tok v1 in
-      let prefix =
-        if String.contains opening 't' || String.contains opening 'T' then "t"
-        else "f"
+      let constructor =
+        if String.contains opening 't' || String.contains opening 'T' then
+          G.TemplateString
+        else G.ConcatString (G.FString "f")
       in
       G.Call
-        ( G.Special (G.ConcatString (G.FString prefix), unsafe_fake "concat")
-          |> G.e,
+        ( G.Special (constructor, fake v1 "") |> G.e,
           ( v1,
             xs
             |> List.map (fun x ->
