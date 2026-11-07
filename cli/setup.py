@@ -17,6 +17,15 @@ import sys
 
 import setuptools
 
+__all__: list[str] = []
+
+
+class BinaryDistribution(setuptools.Distribution):
+    def has_ext_modules(self) -> bool:
+        """Keep the native core out of the wheel's purelib directory."""
+        return True
+
+
 IS_WINDOWS = platform.system() == "Windows"
 # See ../scripts/build-wheels.sh, which is called from our GHA workflows.
 # This script assumes the presence of a semgrep-core binary copied under
@@ -116,5 +125,6 @@ if WHEEL_CMD in sys.argv:
     cmdclass[WHEEL_CMD] = BdistWheel
 
 setuptools.setup(
+    distclass=BinaryDistribution,
     cmdclass=cmdclass,
 )
