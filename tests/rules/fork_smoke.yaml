@@ -1,0 +1,16 @@
+rules:
+  - id: fork-template
+    languages: [python]
+    message: Template strings parse and match
+    severity: INFO
+    pattern: t"hello {$NAME}"
+  - id: fork-lazy
+    languages: [python]
+    message: Lazy imports parse and match
+    severity: INFO
+    pattern: lazy import $MODULE
+  - id: fork-unpacking
+    languages: [python]
+    message: Dictionary unpacking comprehensions parse and match
+    severity: INFO
+    pattern: '{**$ITEM for $ITEM in $ITEMS}'
