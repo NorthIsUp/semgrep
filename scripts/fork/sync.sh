@@ -3,7 +3,7 @@ set -euo pipefail
 source scripts/fork/sync-lib.sh
 
 [[ $(git branch --show-current) == northisup ]] || { echo 'Run sync on northisup' >&2; exit 1; }
-git diff --quiet && git diff --cached --quiet
+require_clean_checkout
 git fetch --no-tags https://github.com/semgrep/semgrep.git develop:refs/remotes/semgrep/develop
 upstream=refs/remotes/semgrep/develop
 before=$(git rev-parse HEAD)
@@ -22,6 +22,7 @@ while IFS=$'\t' read -r number base head; do
 done < <(jq -r '.[] | select(.status == "active") | [.upstream_pr, .base, .head] | @tsv' "$ledger")
 
 if ! git merge --no-commit --no-ff "$upstream"; then
+  git rev-parse -q --verify MERGE_HEAD >/dev/null
   resolve_retired_conflicts "$upstream" "$ledger"
 fi
 cp "$ledger" .fork/patches.json

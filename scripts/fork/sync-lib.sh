@@ -1,6 +1,13 @@
 # shellcheck shell=bash
 # Retire patches only when Git can verify that their changes reached upstream.
 
+require_clean_checkout() {
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo 'Upstream sync requires a clean checkout' >&2
+    return 1
+  fi
+}
+
 patch_is_upstream() {
   local base=$1 head=$2 upstream=$3 patch_file=$4 patch_id
   if git merge-base --is-ancestor "$head" "$upstream"; then

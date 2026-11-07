@@ -20,6 +20,19 @@ git switch -qc patch
 printf 'feature\n' > feature.txt
 git commit -qam feature
 head=$(git rev-parse HEAD)
+printf 'uncommitted\n' >> feature.txt
+if require_clean_checkout; then
+  echo 'FAIL: dirty checkout was accepted' >&2
+  exit 1
+fi
+git add feature.txt
+if require_clean_checkout; then
+  echo 'FAIL: staged changes were accepted' >&2
+  exit 1
+fi
+git reset --hard -q HEAD
+require_clean_checkout
+echo 'PASS: staged and unstaged work block upstream sync'
 git switch -qc upstream "$base"
 if patch_is_upstream "$base" "$head" HEAD "$scratch/patch.diff"; then
   echo 'FAIL: an unapplied patch was retired' >&2
