@@ -52,6 +52,13 @@ jobs:
       - name: Avoid the upstream Homebrew OpenSSL link conflict
         if: runner.os == 'macOS'
         run: brew unlink openssl@3 || true
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        id: opam-cache
+        with:
+          path: |
+            ~/.opam
+            _opam
+          key: fork-opam-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('opam-lockfiles/*.locked', '*.opam', 'dev/required.opam') }}
       - uses: semgrep/setup-ocaml@a739c5405d73c42ef15a9dc995efc0f87396cc36
         with:
           ocaml-compiler: ocaml-variants.5.4.0+options,ocaml-option-flambda
@@ -59,9 +66,16 @@ jobs:
           cache-prefix: northisup-v1-${{ matrix.platform }}-${{ hashFiles('opam-lockfiles/*.locked', '*.opam', 'dev/required.opam') }}
           opam-repositories: |
             default: https://github.com/ocaml/opam-repository.git#922f67e068446a8d8e809a40251a259bd0549552
-          save-opam-post-run: true
+          save-opam-post-run: false
       - name: Set up compiler dependencies
         run: opam exec -- make setup
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        if: steps.opam-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.opam
+            _opam
+          key: ${{ steps.opam-cache.outputs.cache-primary-key }}
       - name: Build and test parser features
         run: |
           opam exec -- make build-core-test
