@@ -1,5 +1,9 @@
 [tools]
+"asdf:bash" = "5.3"
 uv = "0.13.6"
 python = "3.13.15"
 jq = "1.8.1"
 gh = "2.103.3"
+
+[plugins]
+bash = "https://github.com/xaf/asdf-bash.git#8dcfed4ba5fb1bd6a2b05dc5ea93e1b97a7391d8"

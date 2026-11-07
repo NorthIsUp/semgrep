@@ -49,6 +49,9 @@ jobs:
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db
       - name: Test fork maintenance logic
         run: mise run fork:test
+      - name: Avoid the upstream Homebrew OpenSSL link conflict
+        if: runner.os == 'macOS'
+        run: brew unlink openssl@3 || true
       - uses: semgrep/setup-ocaml@a739c5405d73c42ef15a9dc995efc0f87396cc36
         with:
           ocaml-compiler: ocaml-variants.5.4.0+options,ocaml-option-flambda
