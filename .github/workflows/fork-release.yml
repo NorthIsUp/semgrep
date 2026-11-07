@@ -1,0 +1,93 @@
+name: Fork release
+on:
+  push:
+    branches: [northisup]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fork-release-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  metadata:
+    if: github.repository == 'NorthIsUp/semgrep'
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          persist-credentials: false
+      - id: version
+        env:
+          RELEASE_SEQUENCE: ${{ github.run_number }}
+        run: |
+          base=$(sed -nE 's/^version = "([^"]+)"/\1/p' cli/pyproject.toml)
+          echo "version=${base}+northisup.${RELEASE_SEQUENCE}.g${GITHUB_SHA:0:12}" >> "$GITHUB_OUTPUT"
+  build:
+    needs: metadata
+    if: github.repository == 'NorthIsUp/semgrep'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+          - os: macos-15
+            platform: macos-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    env:
+      FORK_VERSION: ${{ needs.metadata.outputs.version }}
+      SEMGREP_SEND_METRICS: 'off'
+      SEMGREP_ENABLE_VERSION_CHECK: '0'
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db
+      - name: Test fork maintenance logic
+        run: mise run fork:test
+      - uses: semgrep/setup-ocaml@a739c5405d73c42ef15a9dc995efc0f87396cc36
+        with:
+          ocaml-compiler: ocaml-variants.5.4.0+options,ocaml-option-flambda
+          opam-pin: false
+          cache-prefix: northisup-v1-${{ matrix.platform }}-${{ hashFiles('opam-lockfiles/*.locked', '*.opam', 'dev/required.opam') }}
+          opam-repositories: |
+            default: https://github.com/ocaml/opam-repository.git#922f67e068446a8d8e809a40251a259bd0549552
+          save-opam-post-run: true
+      - name: Set up compiler dependencies
+        run: opam exec -- make setup
+      - name: Build and test parser features
+        run: |
+          opam exec -- make build-core-test
+          opam exec -- ./test -s parsing_python -s python315 -s python_t_strings -s t_strings.py -s pep798 -s pep810 -j 2
+      - name: Build and verify wheel
+        run: mise run fork:package
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: fork-${{ matrix.platform }}
+          path: release/*
+          if-no-files-found: error
+  publish:
+    needs: [metadata, build]
+    if: github.repository == 'NorthIsUp/semgrep' && github.ref == 'refs/heads/northisup'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          pattern: fork-*
+          path: release
+          merge-multiple: true
+      - name: Publish immutable GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORK_VERSION: ${{ needs.metadata.outputs.version }}
+        run: bash scripts/fork/publish.sh

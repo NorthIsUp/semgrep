@@ -227,3 +227,8 @@ result
 
 # Ephemeral grammar clones (fetched via grammar_registry.py; see lang/semgrep-grammars/src/.gitignore).
 libs/ocaml-tree-sitter-semgrep/lang/semgrep-grammars/src/tree-sitter-*
+
+# NorthIsUp build outputs
+/.fork-venv/
+/release/
+/mise.local.toml

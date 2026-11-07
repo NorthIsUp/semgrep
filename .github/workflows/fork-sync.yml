@@ -1,0 +1,36 @@
+name: Weekly upstream sync
+on:
+  schedule:
+    - cron: '23 8 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fork-upstream-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    if: github.repository == 'NorthIsUp/semgrep'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          ref: northisup
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db
+      - name: Configure sync commit identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh auth setup-git --hostname github.com
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+      - name: Sync upstream and retire integrated patches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: mise run fork:sync

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Test fork sync retirement and conflict resolution in temporary Git repositories"
+set -euo pipefail
+exec bash scripts/fork/test-sync.sh

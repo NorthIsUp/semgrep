@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Merge upstream develop and retire verified upstreamed patches on northisup"
+set -euo pipefail
+exec bash scripts/fork/sync.sh
