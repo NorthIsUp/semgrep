@@ -11,5 +11,11 @@
     "base": "692bfae4ca1bf070f7e8b603037a19886fa36b4f",
     "head": "4066230bfa955c1656c99e6f813000c0ff47523c",
     "status": "active"
+  },
+  {
+    "upstream_pr": 11987,
+    "base": "51602ad27f09ef9342a5620601de5ef8f572fbc6",
+    "head": "fbbb767530b170909b6618130295d00c4985392d",
+    "status": "active"
   }
 ]
