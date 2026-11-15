@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Rebase the maintained fork stack onto upstream develop and release changes"
+set -euo pipefail
+exec bash scripts/fork/rebase.sh

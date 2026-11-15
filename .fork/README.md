@@ -15,10 +15,17 @@ the whole archive, then run `semgrep/bin/semgrep-core` inside it.
 
 ## Maintenance
 
-`Weekly upstream sync` runs Mondays at 08:23 UTC and supports manual dispatch.
-It merges upstream into `northisup`, updates `develop`, and explicitly dispatches
-the release workflow after a changed sync (GitHub suppresses push workflows for
-commits made with `GITHUB_TOKEN`). Updates are atomic and never force-pushed.
+`Daily upstream rebase` runs at 08:23 UTC and supports manual dispatch. It
+rebases the maintained stack onto upstream `develop`, updates the `develop`
+mirror, and dispatches the release workflow after a changed rebase (GitHub
+suppresses push workflows for commits made with `GITHUB_TOKEN`). The maintained
+branch update uses a force-with-lease guard and stops for human resolution if
+there are conflicts or the branch changed concurrently.
+
+`Weekly upstream sync` runs Mondays at 08:23 UTC to verify and retire patches
+that have landed upstream. It also supports manual dispatch. Both maintenance
+workflows share a concurrency group so they cannot update the fork branches at
+the same time.
 
 `.fork/patches.json` records the original base/head of each downstream PR.
 A patch retires only when its head is an upstream ancestor, its complete patch

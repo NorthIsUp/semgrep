@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: fork-upstream-sync
+  group: fork-upstream-maintenance
   cancel-in-progress: false
 jobs:
   sync:
