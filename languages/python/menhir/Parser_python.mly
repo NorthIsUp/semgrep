@@ -138,6 +138,7 @@ let lazy_imports (keyword, tok) imports =
  ASSERT
  NONE TRUE FALSE
  ASYNC AWAIT
+ MATCH CASE
  NONLOCAL
  (* python2: *)
  PRINT EXEC
@@ -248,7 +249,7 @@ nl_or_stmt:
  | stmt    { $1 }
 
 sgrep_spatch_pattern:
- (* for decorator patterns @$NAME(...) *)
+ (* for decorator patterns @$name(...) *)
  | decorator EOF { Flag_parsing.sgrep_guard (Decorator $1) }
  | stmt NEWLINE? EOF   {
    match $1 with
@@ -265,9 +266,9 @@ sgrep_spatch_pattern:
 import_stmt:
   | import_name { $1 }
   | import_from { $1 }
-  (* lazy is a soft keyword, so it remains NAME in the lexer. *)
-  | NAME import_name { lazy_imports $1 $2 }
-  | NAME import_from { lazy_imports $1 $2 }
+  (* lazy is a soft keyword, so it remains name in the lexer. *)
+  | name import_name { lazy_imports $1 $2 }
+  | name import_from { lazy_imports $1 $2 }
 
 
 import_name: IMPORT list_sep(dotted_as_name, ",")
@@ -276,11 +277,11 @@ import_name: IMPORT list_sep(dotted_as_name, ",")
 
 dotted_as_name:
   | dotted_name         { $1, None }
-  | dotted_name AS NAME { $1, Some $3 }
+  | dotted_name AS name { $1, Some $3 }
 
 dotted_name:
-  | NAME { [$1] }
-  | NAME "." dotted_name { $1::$3 }
+  | name { [$1] }
+  | name "." dotted_name { $1::$3 }
 
 
 import_from:
@@ -306,8 +307,8 @@ dot_level:
   | "..." dot_level { $1::$2 }
 
 import_as_name:
-  | NAME         { $1, None }
-  | NAME AS NAME { $1, Some $3 }
+  | name         { $1, None }
+  | name AS name { $1, Some $3 }
 
 (*************************************************************************)
 (* Variable definition *)
@@ -374,10 +375,10 @@ namedexpr_or_star_expr:
 (* Function definition *)
 (*************************************************************************)
 (* this rule is referenced in compound_stmt shown later *)
-funcdef: DEF NAME parameters return_type? ":" suite
+funcdef: DEF name parameters return_type? ":" suite
     { FunctionDef ($1, $2, None, $3, $4, $6, []) }
 
-async_funcdef: ASYNC DEF NAME parameters return_type? ":" suite
+async_funcdef: ASYNC DEF name parameters return_type? ":" suite
     { FunctionDef ($2, $3, None, $4, $5, $7, [] (* TODO $1 *)) }
 
 (* typing-ext: *)
@@ -411,9 +412,9 @@ typed_parameter:
   | "..."           { Flag_parsing.sgrep_guard (ParamEllipsis $1) }
 
 tfpdef:
-  | NAME            { $1, None }
+  | name            { $1, None }
   (* typing-ext: *)
-  | NAME ":" test   { $1, Some $3 }
+  | name ":" test   { $1, Some $3 }
 
 tfpdef_or_fpdef:
   | tfpdef          { PatternName (fst $1), snd $1 }
@@ -433,14 +434,14 @@ varargslist:
 (* python3-ext: can be in any order, ParamStar before or after Classic *)
 parameter:
   | fpdef           { ParamPattern ($1, None) }
-  | NAME "=" test   { ParamDefault ((PatternName $1, None), $3) }
-  | "*" NAME        { ParamStar ($1, ($2, None)) }
+  | name "=" test   { ParamDefault ((PatternName $1, None), $3) }
+  | "*" name        { ParamStar ($1, ($2, None)) }
   (* python3-ext: https://www.python.org/dev/peps/pep-0570/ *)
   | "/"             { ParamSlash $1 }
-  | "**" NAME       { ParamPow ($1, ($2, None)) }
+  | "**" name       { ParamPow ($1, ($2, None)) }
 
 fpdef:
-  | NAME           { PatternName $1 }
+  | name           { PatternName $1 }
   | "(" fplist ")" { PatternTuple $2 }
 
 fplist:
@@ -451,7 +452,7 @@ fplist:
 (* Class definition *)
 (*************************************************************************)
 
-classdef: CLASS NAME arglist_paren_opt ":" suite
+classdef: CLASS name arglist_paren_opt ":" suite
   { ClassDef ($1, $2, None, $3, $5, []) }
 
 arglist_paren_opt:
@@ -545,10 +546,10 @@ raise_stmt:
   | RAISE test "," test "," test    { RaisePython2 ($1, $2, Some $4, Some $6) }
 
 
-global_stmt: GLOBAL list_sep(NAME, ",") { Global ($1, $2) }
+global_stmt: GLOBAL list_sep(name, ",") { Global ($1, $2) }
 
 (* python3-ext: *)
-nonlocal_stmt: NONLOCAL list_sep(NAME, ",") { NonLocal ($1, $2) }
+nonlocal_stmt: NONLOCAL list_sep(name, ",") { NonLocal ($1, $2) }
 
 assert_stmt:
   | ASSERT test          { Assert ($1, $2, None) }
@@ -557,6 +558,7 @@ assert_stmt:
 
 
 compound_stmt:
+  | match_stmt  { $1 }
   | if_stmt     { $1 }
   | while_stmt  { $1 }
   | for_stmt    { $1 }
@@ -570,6 +572,40 @@ compound_stmt:
      * with async_stmt below, Python enforces the def to be decorated.
      *)
   | async_stmt  { $1 }
+
+match_stmt:
+  | MATCH test ":" NEWLINE INDENT case_block+ DEDENT
+      { Switch ($1, $2, $6) }
+
+case_block:
+  | CASE pattern guard? ":" suite
+      { CasesAndBody ([Case ($1, $2)], $5) }
+
+guard:
+  | IF test { $2 }
+
+pattern:
+  | pattern BITOR list_sep(pattern, BITOR) { PatDisj ($1 :: $3) }
+  | pattern AS name { PatAs ($1, $2, $3) }
+  | name { if fst $1 = "_" then PatUnderscore (snd $1) else PatName $1 }
+  | INT { PatLiteral (Num (Int $1)) }
+  | FLOAT { PatLiteral (Num (Float $1)) }
+  | TRUE { PatLiteral (Bool (true, $1)) }
+  | FALSE { PatLiteral (Bool (false, $1)) }
+  | NONE { PatLiteral (None_ $1) }
+  | STR { let (s, _, tok) = $1 in PatLiteral (Str (s, tok)) }
+  | "(" list_comma(pattern) ")" { PatTuple ($1, $2, $3) }
+  | "[" list_comma(pattern) "]" { PatList ($1, $2, $3) }
+  | match_dotted_name "(" list_comma(pattern) ")" { PatConstructor ($1, ($2, $3, $4)) }
+
+match_dotted_name:
+  | name { [$1] }
+  | match_dotted_name "." name { $1 @ [$3] }
+
+name:
+  | NAME { $1 }
+  | MATCH { Tok.content_of_tok $1, $1 }
+  | CASE { Tok.content_of_tok $1, $1 }
 
 decorated:
   | decorator+ classdef {
@@ -630,10 +666,10 @@ excepthandler:
   | EXCEPT                  ":" suite { ExceptHandler ($1, None, None, $3) }
   (* python3-ext: https://peps.python.org/pep-0758/ (was 'except A, e:' in python2) *)
   | EXCEPT     tuple(test)  ":" suite { ExceptHandler ($1, Some (tuple_expr $2), None, $4) }
-  | EXCEPT     test AS NAME ":" suite { ExceptHandler ($1, Some $2, Some $4, $6) }
+  | EXCEPT     test AS name ":" suite { ExceptHandler ($1, Some $2, Some $4, $6) }
   (* python3-ext: https://peps.python.org/pep-0654/ *)
   | EXCEPT "*" tuple(test)  ":" suite { ExceptHandler ($1, Some (tuple_expr $3), None, $5) }
-  | EXCEPT "*" test AS NAME ":" suite { ExceptHandler ($1, Some $3, Some $5, $7) }
+  | EXCEPT "*" test AS name ":" suite { ExceptHandler ($1, Some $3, Some $5, $7) }
 
 with_stmt:
   | WITH with_inner ":" suite                         { $2 ($1, $4) }
@@ -760,7 +796,7 @@ atom_and_trailers:
             Subscript ($1, ($2, l, $4), Load)
       }
 
-  | atom_and_trailers "." NAME { Attribute ($1, $2, $3, Load) }
+  | atom_and_trailers "." name { Attribute ($1, $2, $3, Load) }
   (* sgrep-ext: *)
   | atom_and_trailers "." "..."
     { Flag_parsing.sgrep_guard (DotAccessEllipsis ($1, $3)) }
@@ -781,7 +817,7 @@ type_for_lsif:
 (*----------------------------*)
 
 atom:
-  | NAME        { Name ($1, Load) }
+  | name        { Name ($1, Load) }
 
   | INT         { Literal (Num (Int $1)) }
   | LONGINT     { Literal (Num (LongInt ($1))) }
@@ -867,7 +903,7 @@ format_specifier: format_token+ { $1 }
 format_token:
   | INT   { mk_str (snd $1) }
   | FLOAT { mk_str (snd $1) }
-  | NAME  { mk_str (snd $1) }
+  | name  { mk_str (snd $1) }
   | MOD { mk_str $1 } (* for dates *)
   | LT { mk_str $1 } | GT { mk_str $1 }
   | BITXOR { mk_str $1 }
@@ -1064,7 +1100,7 @@ argument:
 
   (* sgrep-ext: difficult to move in atom without s/r conflict so restricted
      * to argument for now *)
-  | NAME ":" test
+  | name ":" test
     { Flag_parsing.sgrep_guard (Arg (TypedMetavar ($1, $2, $3))) }
 
   | test "=" test

@@ -63,6 +63,26 @@ let comprehension_kinds () =
         ("{k: v for k, v in pairs}", Dict);
       ]
 
+let match_statements () =
+  let statements =
+    generic_program
+      "match value:\n\
+       \032\032case 1 | 2:\n\
+       \032\032\032\032result = 'small'\n\
+       \032\032case [3, item]:\n\
+       \032\032\032\032result = item\n"
+  in
+  (match statements with
+  | { AST_generic.s = AST_generic.Switch (_, _, cases); _ } :: _ ->
+      Alcotest.(check int) "case count" 2 (List.length cases)
+  | _ -> Alcotest.fail "expected a native match statement");
+  let soft_keyword_identifiers =
+    generic_program "match = case\ncase(match)\n"
+  in
+  Alcotest.(check int)
+    "soft keywords remain valid identifiers" 2
+    (List.length soft_keyword_identifiers)
+
 let tests =
   Testo.categorize "parsing_python"
     [
@@ -173,6 +193,7 @@ let tests =
             [ "\\x0"; "\\u123"; "\\U00110000"; "\\N{BOGUS}"; "\\" ]);
       t "Python 3.15 lazy imports" lazy_imports;
       t "Python 3.15 unpacking comprehension kinds" comprehension_kinds;
+      t "Python structural pattern matching" match_statements;
       t "dictionary spread container kinds" (fun () ->
           List.iter
             (fun source ->
