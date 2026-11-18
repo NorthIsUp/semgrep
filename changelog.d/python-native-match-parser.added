@@ -1,1 +1,1 @@
-Python's native parser now supports structural `match` statements and common pattern forms.
+Python's native parser now supports structural `match` statements and common pattern forms. The Tree-sitter fallback also recognizes t-strings, including in files with `match` statements.

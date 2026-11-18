@@ -94,6 +94,10 @@ let match_statements () =
 let tests =
   Testo.categorize "parsing_python"
     [
+      t "tree-sitter parses match with template strings" (fun () ->
+          Parse_python_tree_sitter.parse
+            (tests_path / "parsing" / "python" / "match_and_t_strings.py")
+          |> ignore);
       t "template string prefixes" (fun () ->
           let prefixes =
             [ "t"; "T"; "tr"; "tR"; "Tr"; "TR"; "rt"; "rT"; "Rt"; "RT" ]
