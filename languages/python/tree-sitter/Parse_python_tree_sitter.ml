@@ -41,24 +41,29 @@ let no_ctx = Param
 let fb = Tok.unsafe_fake_bracket
 let invalid () = raise (Tok.NoTokenLocation "Invalid program")
 
-(* The upstream tree-sitter scanner accepts broader flag combinations, but
- * Python f-strings only allow f, fr, and rf prefixes (case-insensitively).
- * Keep this check exact so invalid forms such as ff, fb, or uf do not become
- * valid simply because the scanner saw an f flag.
+(* The upstream tree-sitter scanner accepts broader flag combinations than
+ * Python allows. Check the exact f/fr/rf and t/tr/rt prefixes so invalid
+ * combinations do not become interpolated strings accidentally.
  *)
-let is_f_string_start tok =
+let is_quote = function
+  | '\''
+  | '"' ->
+      true
+  | _ -> false
+
+let has_interpolated_prefix prefixes tok =
   let s = Tok.content_of_tok tok |> String.lowercase_ascii in
-  let is_quote = function
-    | '\''
-    | '"' ->
-        true
-    | _ -> false
-  in
-  let len = String.length s in
-  (len >= 2 && s.[0] = 'f' && is_quote s.[1])
-  || len >= 3
-     && ((s.[0] = 'f' && s.[1] = 'r') || (s.[0] = 'r' && s.[1] = 'f'))
-     && is_quote s.[2]
+  List.exists
+    (fun prefix ->
+      let len = String.length prefix in
+      String.length s > len && String.sub s 0 len = prefix && is_quote s.[len])
+    prefixes
+
+let is_f_string_start tok = has_interpolated_prefix [ "f"; "fr"; "rf" ] tok
+let is_t_string_start tok = has_interpolated_prefix [ "t"; "tr"; "rt" ] tok
+
+let is_interpolated_string_start tok =
+  is_f_string_start tok || is_t_string_start tok
 
 (* AST builders helpers
  * less: could be moved in AST_Python.ml to factorize things with
@@ -1138,7 +1143,7 @@ and map_primary_expression (env : env) (x : CST.primary_expression) : expr =
       name_of_id id
   | `Str x -> (
       let t1, s, t2 = map_string_ env x in
-      if is_f_string_start t1 then InterpolatedString (t1, s, t2)
+      if is_interpolated_string_start t1 then InterpolatedString (t1, s, t2)
       else
         match s with
         | [] -> Literal (Str ("", t1))
