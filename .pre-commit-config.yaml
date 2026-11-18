@@ -196,7 +196,7 @@ repos:
       - id: shellcheck
         name: shellcheck
         language: docker_image
-        entry: koalaman/shellcheck:v0.8.0
+        entry: koalaman/shellcheck:v0.8.0 -x
         files: "[.]sh$"
       - id: hadolint
         name: hadolint
