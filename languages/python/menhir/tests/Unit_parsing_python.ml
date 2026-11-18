@@ -64,6 +64,9 @@ let comprehension_kinds () =
       ]
 
 let match_statements () =
+  Parse_python.parse_program
+    (tests_path / "parsing" / "python" / "pattern_matching.py")
+  |> ignore;
   let statements =
     generic_program
       "match value:\n\
@@ -76,6 +79,11 @@ let match_statements () =
   | { AST_generic.s = AST_generic.Switch (_, _, cases); _ } :: _ ->
       Alcotest.(check int) "case count" 2 (List.length cases)
   | _ -> Alcotest.fail "expected a native match statement");
+  generic_program
+    "match value:\n\
+     \032\032case {\"name\": item}:\n\
+     \032\032\032\032result = item\n"
+  |> ignore;
   let soft_keyword_identifiers =
     generic_program "match = case\ncase(match)\n"
   in

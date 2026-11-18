@@ -88,6 +88,13 @@ let mk_str ii =
   let s = Tok.content_of_tok ii in
   Literal( Str (s, ii))
 
+let dotted_pattern = function
+  | [] -> raise Impossible
+  | first :: rest ->
+      List.fold_left
+        (fun pattern attr -> PatAttribute (pattern, snd attr, attr))
+        (PatName first) rest
+
 let lazy_imports (keyword, tok) imports =
   if keyword <> "lazy" then raise Parsing.Parse_error;
   List.map (function
@@ -574,8 +581,12 @@ compound_stmt:
   | async_stmt  { $1 }
 
 match_stmt:
-  | MATCH test ":" NEWLINE INDENT case_block+ DEDENT
+  | MATCH match_subject ":" NEWLINE INDENT case_block+ DEDENT
       { Switch ($1, $2, $6) }
+
+match_subject:
+  | test { $1 }
+  | test "," list_sep(test, ",") { Tuple (CompList (Tok.unsafe_fake_bracket ($1 :: $3)), Load) }
 
 case_block:
   | CASE pattern guard? ":" suite
@@ -588,15 +599,35 @@ pattern:
   | pattern BITOR list_sep(pattern, BITOR) { PatDisj ($1 :: $3) }
   | pattern AS name { PatAs ($1, $2, $3) }
   | name { if fst $1 = "_" then PatUnderscore (snd $1) else PatName $1 }
+  | name DOT match_dotted_name { dotted_pattern ($1 :: $3) }
   | INT { PatLiteral (Num (Int $1)) }
   | FLOAT { PatLiteral (Num (Float $1)) }
   | TRUE { PatLiteral (Bool (true, $1)) }
   | FALSE { PatLiteral (Bool (false, $1)) }
   | NONE { PatLiteral (None_ $1) }
   | STR { let (s, _, tok) = $1 in PatLiteral (Str (s, tok)) }
-  | "(" list_comma(pattern) ")" { PatTuple ($1, $2, $3) }
-  | "[" list_comma(pattern) "]" { PatList ($1, $2, $3) }
-  | match_dotted_name "(" list_comma(pattern) ")" { PatConstructor ($1, ($2, $3, $4)) }
+  | "(" ")" { PatTuple ($1, [], $2) }
+  | "(" list_comma(pattern_item) ")" { PatTuple ($1, $2, $3) }
+  | "[" "]" { PatList ($1, [], $2) }
+  | "[" list_comma(pattern_item) "]" { PatList ($1, $2, $3) }
+  | match_dotted_name "(" class_pattern_arguments ")" { PatConstructor ($1, ($2, $3, $4)) }
+  | "{" "}" { PatDict ($1, [], $2) }
+  | "{" list_comma(mapping_pattern_item) "}" { PatDict ($1, $2, $3) }
+
+pattern_item:
+  | pattern { $1 }
+  | MULT name { PatSplat ($1, PatName $2) }
+
+class_pattern_arguments:
+  | (* empty *) { [] }
+  | list_comma(class_pattern_argument) { $1 }
+
+class_pattern_argument:
+  | pattern { $1 }
+  | name EQ pattern { PatKeyVal (PatName $1, $2, $3) }
+
+mapping_pattern_item:
+  | pattern COLON pattern { PatKeyVal ($1, $2, $3) }
 
 match_dotted_name:
   | name { [$1] }
